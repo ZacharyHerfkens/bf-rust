@@ -1,5 +1,6 @@
-mod interpreter;
 mod compile;
+mod interpret;
+mod tests;
 
 use clap::Parser;
 
@@ -17,10 +18,10 @@ fn main() {
             std::process::exit(1);
         });  
 
-    let mut input = std::io::stdin();
-    let mut output = std::io::stdout();
+    let input = std::io::stdin();
+    let output = std::io::stdout();
 
-    interpreter::run(program, &mut input, &mut output).unwrap_or_else(|err| {
+    interpret::run(&program, input, output).unwrap_or_else(|err| {
         eprintln!("Error running program: {}", err);
         std::process::exit(1);
     });
