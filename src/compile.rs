@@ -1,5 +1,3 @@
-type Error = Box<dyn std::error::Error>;
-
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum Instruction {
     MovePtr(isize),
@@ -8,6 +6,22 @@ pub enum Instruction {
     Write,
     LoopStart(usize),
     LoopEnd(usize),
+}
+
+#[derive(Debug, Clone, Copy)]
+pub enum Error {
+    UnmatchedOpenBracket(usize),
+    UnmatchedCloseBracket(usize),
+}
+
+impl std::fmt::Display for Error {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        use Error::*;
+        match self {
+            UnmatchedOpenBracket(i) => write!(f, "Unmatched '[' at position {}", i),
+            UnmatchedCloseBracket(i) => write!(f, "Unmatched ']' at position {}", i),
+        }
+    }
 }
 
 pub fn compile(prog: &str) -> Result<Vec<Instruction>, Error> {
@@ -24,12 +38,10 @@ pub fn compile(prog: &str) -> Result<Vec<Instruction>, Error> {
             ',' => instrs.push(Instruction::Read),
             '[' => {
                 instrs.push(Instruction::LoopStart(usize::MAX));
-                loop_stack.push(instrs.len());
+                loop_stack.push((instrs.len(), i));
             }
             ']' => {
-                let start = loop_stack.pop().ok_or_else(|| {
-                    format!("Unmatched ']' at position {}", i)
-                })?;
+                let (start, _) = loop_stack.pop().ok_or(Error::UnmatchedCloseBracket(i))?;
                 instrs.push(Instruction::LoopEnd(start));
                 instrs[start - 1] = Instruction::LoopStart(instrs.len());
             }
@@ -38,7 +50,8 @@ pub fn compile(prog: &str) -> Result<Vec<Instruction>, Error> {
     }
 
     if !loop_stack.is_empty() {
-        return Err(format!("Unmatched '[' at position {}", loop_stack.last().unwrap() - 1).into());
+        let (_, i) = loop_stack.pop().unwrap();
+        return Err(Error::UnmatchedOpenBracket(i));
     }
 
     Ok(instrs)

@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod interpreter_tests {
-    use crate::interpret::*;
+    use crate::interpret::{self, run};
 
     #[test]
     fn test_write_a() {
@@ -33,19 +33,24 @@ mod interpreter_tests {
     }
 
     #[test]
-    fn test_cell_oob() {
+    fn test_cell_oob_left() {
         let mut bytes = Vec::new();
         let prog = "<";
 
         match run(prog, [].as_slice(), &mut bytes) {
-            Err(e) if e.to_string() == "cell out of bounds" => (),
-            _ => panic!("Expected error"),
+            Err(interpret::Error::CellOutOfBounds) => (),
+            _ => panic!("Expected cell out of bounds error"),
         }
+    }
 
+    #[test]
+    fn test_cell_oob_right() {
+        let mut bytes = Vec::new();
         let prog = "+[>+]";
+
         match run(prog, [].as_slice(), &mut bytes) {
-            Err(e) if e.to_string() == "cell out of bounds" => (),
-            _ => panic!("Expected error"),
+            Err(interpret::Error::CellOutOfBounds) => (),
+            _ => panic!("Expected cell out of bounds error"),
         }
     }
 }

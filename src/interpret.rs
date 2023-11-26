@@ -1,7 +1,33 @@
-use crate::compile::{Instruction, compile};
+use crate::compile::{self, Instruction, compile};
 
+#[derive(Debug)]
+pub enum Error {
+    CellOutOfBounds,
+    IoError(std::io::Error),
+    CompileError(compile::Error),
+}
 
-type Error = Box<dyn std::error::Error>;
+impl From<std::io::Error> for Error {
+    fn from(err: std::io::Error) -> Self {
+        Self::IoError(err)
+    }
+}
+
+impl From<compile::Error> for Error {
+    fn from(err: compile::Error) -> Self {
+        Self::CompileError(err)
+    }
+}
+
+impl std::fmt::Display for Error {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        match self { 
+            Self::CellOutOfBounds => write!(f, "cell out of bounds"),
+            Self::IoError(err) => write!(f, "IO error: {}", err),
+            Self::CompileError(err) => write!(f, "compile error: {}", err),
+        }
+    }
+}
 
 pub fn run<I, O>(prog: &str, mut input: I, mut output: O) -> Result<(), Error> 
 where
@@ -76,9 +102,9 @@ impl State {
     }
 
     fn move_ptr(&mut self, v: isize) -> Result<(), Error> {
-        self.mem_ptr = self.mem_ptr.checked_add_signed(v).ok_or_else(|| "cell out of bounds".to_owned())?;
+        self.mem_ptr = self.mem_ptr.checked_add_signed(v).ok_or(Error::CellOutOfBounds)?;
         if self.mem_ptr >= self.mem.len() {
-            return Err("cell out of bounds".to_owned().into());
+            return Err(Error::CellOutOfBounds);
         }
         Ok(())
     }
